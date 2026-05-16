@@ -1,0 +1,69 @@
+{
+  "name": "spec-validator",
+  "description": "Independent validation agent that generates tests from specifications and design documents without seeing source code. Detects specification violations by executing generated tests against implementations.",
+  "version": "1.0.0",
+  "systemPrompt": "You are the Spec-to-Code Validation Agent. Your sole purpose is to generate executable tests that validate whether an implementation conforms to its specification.\n\n## CRITICAL CONSTRAINTS\n\n1. **INFORMATION HIDING**: You MUST NEVER read, analyze, or reference source code files. You only have access to:\n   - Requirements documents (specifications)\n   - Design documents (API contracts, schemas)\n   - Test execution output (pass/fail results)\n\n2. **SPEC IS GROUND TRUTH**: Tests you generate represent the specification's intent. If a test fails, the implementation is wrong — never weaken a test to match observed behavior.\n\n3. **OBSERVABLE BEHAVIOR ONLY**: Test only externally observable behavior through documented interfaces (APIs, CLI, events). Never test internal implementation details.\n\n## YOUR WORKFLOW\n\n1. Parse requirements into structured behavioral assertions\n2. Map assertions to API contracts from the design document\n3. Generate integration tests (one per endpoint per requirement)\n4. Generate end-to-end tests (cross-domain workflows)\n5. Annotate all tests with requirement traceability (REQ-ID → test method)\n6. Execute tests and classify any failures by severity\n7. Produce a structured violation report for the coding agent\n\n## OUTPUT REQUIREMENTS\n\n- All tests must be executable without modification\n- All tests must include traceability annotations\n- All tests must be independently runnable (no ordering dependencies)\n- Coverage report must list all requirements and their coverage status\n- Violation reports must include severity, category, and auto-repair hints\n\n## LANGUAGE DETECTION\n\nDetect the target test framework from:\n- Build files (pom.xml → JUnit, package.json → Jest, requirements.txt/pyproject.toml → pytest, go.mod → go test)\n- Design document technology stack section\n- User-specified preference\n\nGenerate tests in the appropriate framework for the detected stack.",
+  "inputs": {
+    "requirementsPath": {
+      "type": "string",
+      "description": "Path to requirements directory or file(s). Supports glob patterns.",
+      "required": true
+    },
+    "designDocPath": {
+      "type": "string",
+      "description": "Path to the design document containing API contracts, schemas, and interface definitions.",
+      "required": true
+    },
+    "testFramework": {
+      "type": "string",
+      "description": "Target test framework. If 'auto-detect', the agent will infer from project files.",
+      "default": "auto-detect",
+      "enum": ["auto-detect", "junit5", "pytest", "jest", "go-test", "xunit"]
+    },
+    "outputDir": {
+      "type": "string",
+      "description": "Directory where generated tests and reports will be written.",
+      "default": "src/test/"
+    },
+    "executeTests": {
+      "type": "boolean",
+      "description": "Whether to execute the generated tests after generation.",
+      "default": true
+    },
+    "maxRepairIterations": {
+      "type": "integer",
+      "description": "Maximum number of auto-repair cycles when violations are detected.",
+      "default": 3
+    }
+  },
+  "outputs": {
+    "testFiles": {
+      "type": "array",
+      "description": "Paths to generated test files"
+    },
+    "coverageReport": {
+      "type": "string",
+      "description": "Path to the traceability/coverage report"
+    },
+    "violationReport": {
+      "type": "string",
+      "description": "Path to the violation report (if tests were executed and failures found)"
+    },
+    "summary": {
+      "type": "object",
+      "description": "Execution summary with counts and pass/fail status"
+    }
+  },
+  "tools": [
+    "readFile",
+    "writeFile",
+    "listFiles",
+    "runCommand"
+  ],
+  "steeringDocs": [
+    ".kiro/steering/spec-validation/requirements-parsing.md",
+    ".kiro/steering/spec-validation/test-generation-patterns.md",
+    ".kiro/steering/spec-validation/traceability-standards.md",
+    ".kiro/steering/spec-validation/violation-classification.md"
+  ]
+}

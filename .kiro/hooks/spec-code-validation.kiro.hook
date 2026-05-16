@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Spec Validation on Source Change",
+  "description": "Automatically runs the spec-to-code validation tests when Java source files in src/main are edited, detecting specification violations early.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/main/java/**/*.java"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A Java source file was just edited. Run the spec validation tests to check for specification violations. Execute: ./mvnw test -Dspring.profiles.active=test -q and report any test failures as spec violations. If tests fail, classify the violations by severity (P1-P4) per the violation-classification steering doc and suggest fixes. If all tests pass, briefly confirm spec compliance."
+  }
+}
