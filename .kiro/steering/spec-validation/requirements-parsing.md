@@ -49,7 +49,7 @@ For each requirements file:
    - INFRASTRUCTURE: Describes deployment, configuration, or operational concerns
 4. **Extract preconditions** — any "When", "If", "While", "Given" clauses preceding the action
 5. **Extract postconditions** — the expected outcome/response/state after the action
-6. **Map to design doc API** — link each testable requirement to its corresponding API endpoint from the design document
+6. **Map to tech.md API** — link each testable requirement to its corresponding API endpoint from the technical tech.mdument (tech.md)
 
 ## Output Format
 
@@ -80,6 +80,6 @@ Mark the following as NOT_TESTABLE and exclude from test generation:
 ## Handling Ambiguity
 
 When a requirement is ambiguous:
-1. Check the design document for clarification
+1. Check the technical tech.mdument (tech.md) for clarification
 2. If still ambiguous, generate a test for the MOST RESTRICTIVE interpretation
 3. Annotate the test with `@AmbiguousRequirement("REQ-ID")` to flag for human review

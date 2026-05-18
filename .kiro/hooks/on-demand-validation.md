@@ -15,7 +15,7 @@ This hook fires when the user explicitly requests spec validation — useful for
 The user triggers this via:
 ```
 /spec-validate
-/spec-validate --specs ./path/to/requirements --design ./DESIGN.md
+/spec-validate --specs ./path/to/requirements --tech ./tech.md
 /spec-validate --framework pytest --output ./tests/generated/
 ```
 
@@ -24,7 +24,7 @@ The user triggers this via:
 | Parameter | Flag | Default | Description |
 |-----------|------|---------|-------------|
 | Specs path | `--specs` | Auto-discover | Path to requirements |
-| Design doc | `--design` | Auto-discover | Path to design document |
+| Tech doc | `--tech` | Auto-discover | Path to technical design document (tech.md) |
 | Framework | `--framework` | Auto-detect | Test framework to use |
 | Output dir | `--output` | Standard test dir | Where to write tests |
 | Execute | `--no-exec` | true | Skip test execution (generation only) |
@@ -44,7 +44,7 @@ Same as `post-task-validation` but with explicit user control over:
 
 Validate existing code that was written before specs existed:
 ```
-/spec-validate --specs ./new-requirements/ --design ./DESIGN.md
+/spec-validate --specs ./new-requirements/ --tech ./tech.md
 ```
 
 Expected outcome: High failure rate revealing spec gaps in legacy code. The violation report becomes a remediation backlog.
@@ -77,6 +77,6 @@ Override auto-detection for a specific framework:
 ## Output
 
 Same as post-task-validation hook:
-- `spec-validation-coverage.md`
+- `TestsToSpecCoverage.md` — coverage of specs/requirements by E2E and integration tests
 - `spec-validation-violations.md` (if executed and failures found)
 - Summary printed to user
