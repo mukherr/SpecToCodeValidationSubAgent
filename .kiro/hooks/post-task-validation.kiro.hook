@@ -1,0 +1,12 @@
+{
+  "name": "Post-Task Spec Validation",
+  "version": "1.0.0",
+  "description": "Automatically runs spec-to-code validation after a coding task completes, checking that modified source code still conforms to its specification.",
+  "when": {
+    "type": "postTaskExecution"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A coding task just completed. Check if source code was modified in generated-code/src/main/java/ and if requirements files exist in the capability directories. If both conditions are met, run the spec-validator agent: discover requirements, check for a tech doc (tech.md, DESIGN.md, or generated-tech.md — if missing, run brownfield API extraction first), generate integration and end-to-end tests from specs only (never read source code), execute them against the implementation, and report results. If tests fail, classify violations by severity (P1-P4) and suggest fixes. If all pass, confirm spec compliance. Write TestsToSpecCoverage.md and spec-validation-violations.md (if failures found) to the project root."
+  }
+}

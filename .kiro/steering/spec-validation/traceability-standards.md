@@ -155,7 +155,8 @@ After test generation, produce the `TestsToSpecCoverage.md` report with the foll
 
 | Status | Meaning |
 |--------|---------|
-| COVERED | At least one test validates this requirement |
+| COVERED | At least one test validates this requirement (confirmed by mutation kill) |
+| VACUOUS | Test claims coverage but spec mutation survived — assertions don't exercise this requirement |
 | UNCOVERED | Testable requirement but no test generated (gap) |
 | UI-ONLY | Requirement is UI-specific; cannot test via API |
 | INFRA | Infrastructure/deployment requirement; out of scope |
@@ -181,6 +182,8 @@ When tests fail, the violation report MUST reference the requirement:
 
 ```
 {project-root}/
+├── generated-tech.md                    # Extracted API surface (brownfield only — from tree-sitter)
+├── reconciliation-report.md             # REQ-ID → endpoint mapping status (brownfield only)
 ├── TestsToSpecCoverage.md               # Tests-to-specification coverage report (E2E + integration)
 ├── spec-validation-violations.md        # Failure report (after execution)
 └── spec-validation-summary.md           # Executive summary

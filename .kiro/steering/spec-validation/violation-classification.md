@@ -72,6 +72,19 @@ Failures in state tracking or comparison:
 
 Classification signal: Test exercises state transitions; intermediate or final state doesn't match expectation.
 
+### Vacuous Coverage Violations (typically P3)
+
+Tests that claim to cover a requirement but do not actually constrain the implementation toward it. Detected via spec mutation: mutate the requirement, regenerate the test — if the test doesn't change, coverage is decorative.
+
+- **Missing side-effect assertion**: E2E test walks through workflow but never asserts on a claimed downstream effect (balance update, audit record, notification)
+- **Status-code-only coverage**: Test asserts on HTTP status but never verifies response body semantics tied to the requirement
+- **Role-agnostic test**: Test claims authorization coverage but always authenticates as a privileged role without exercising the access constraint
+- **Boundary-insensitive test**: Test uses hardcoded values unrelated to the requirement's numeric/length constraint
+
+Classification signal: Spec mutation (see `spec-mutation.md`) produces a SURVIVED verdict — the regenerated test is identical to the original after normalizing for LLM nondeterminism.
+
+Remediation: Add assertion(s) that specifically exercise the mutated aspect of the requirement. For side-effect mutations, add a verification call (GET after POST) that checks the downstream state change.
+
 ### Infrastructure/Configuration Violations (typically P3-P4)
 
 Failures from misconfiguration rather than logic errors:
@@ -137,6 +150,7 @@ For each violation category, provide structured hints to the coding agent:
 | Missing security attribute | Add attribute to response configuration |
 | Wrong status code | Fix conditional branching in controller/handler |
 | Missing side effect | Add the missing call in the service layer |
+| Vacuous coverage | Add assertion(s) exercising the specific requirement aspect identified by mutation (side effect, boundary, role, status) |
 
 The suggested fix MUST be specific enough for an AI coding agent to locate and fix the issue programmatically. Include:
 - The API endpoint affected

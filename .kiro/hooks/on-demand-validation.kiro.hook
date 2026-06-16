@@ -1,0 +1,12 @@
+{
+  "name": "On-Demand Spec Validation",
+  "version": "1.0.0",
+  "description": "User-triggered hook to run spec-to-code validation on demand. Validates existing or newly generated code against requirements by invoking the spec-validator agent.",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the spec-validator agent against this project. Discover requirements files (look for **/requirements.md in capability directories) and check for a technical design document (tech.md, DESIGN.md, or generated-tech.md). If no tech doc exists, this is brownfield mode — run the API surface extractor from tools/api-surface-extractor first to generate generated-tech.md. Then generate integration and end-to-end tests from the specifications only (do not read source code), execute them against the implementation in generated-code/, classify any failures by severity (P1-P4) per the violation-classification steering doc, and produce: 1. The generated test files 2. A TestsToSpecCoverage.md report showing requirement-to-test traceability 3. A spec-validation-violations.md report if any tests fail"
+  }
+}
