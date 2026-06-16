@@ -1,0 +1,21 @@
+[project]
+name = "api-surface-extractor"
+version = "0.1.0"
+description = "Tree-sitter based API surface extractor for brownfield codebase analysis"
+requires-python = ">=3.10"
+dependencies = [
+    "tree-sitter>=0.23.0",
+    "tree-sitter-java>=0.23.0",
+    "tree-sitter-python>=0.23.0",
+    "tree-sitter-typescript>=0.23.0",
+    "tree-sitter-go>=0.23.0",
+    "tree-sitter-c-sharp>=0.23.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+extract-api-surface = "extractor.cli:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
