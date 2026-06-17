@@ -252,6 +252,18 @@ Each test MUST:
 - Set up its own preconditions (don't rely on prior test state)
 - Clean up or use isolated data (avoid shared mutable state)
 
+## Property-Based Tests (Ubiquitous Requirements)
+
+For requirements using the Ubiquitous EARS pattern ("The system shall [X]") that declare invariants over a quantifiable property, generate property-based tests in addition to example-based integration tests. Property tests exercise the invariant across randomized inputs to prove universality rather than specific-case coverage.
+
+See `property-test-generation.md` for the full taxonomy of property categories (format, boundary, idempotency, data integrity, ordering, security), generator strategies, framework templates, and trial count guidance.
+
+## E2E Workflow Composition
+
+End-to-end tests are not manually composed — they are derived from the requirement dependency graph. The agent builds a directed graph where edges connect requirements whose postconditions satisfy other requirements' preconditions, then extracts maximal workflow paths.
+
+See `e2e-workflow-discovery.md` for the graph construction algorithm, path extraction heuristics, cross-domain prioritization, cycle handling, and workflow naming conventions.
+
 ## What NOT to Test
 
 - Internal implementation details (private methods, internal data structures)
