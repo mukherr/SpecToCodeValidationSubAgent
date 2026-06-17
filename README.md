@@ -25,19 +25,36 @@ It operates in two modes:
             │  (never reads src code)  │
             └──────────────┬───────────┘
                            │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
+              ┌────────────┼─────────────────┐
+              ▼            ▼                  ▼
+   ┌────────────────┐  ┌──────────────┐  ┌────────────────┐
+   │ Requirement    │  │ State Token  │  │ Ubiquitous Req │
+   │ → Endpoint Map │  │ Extraction   │  │ Detection      │
+   └───────┬────────┘  └──────┬───────┘  └───────┬────────┘
+           │                  ▼                   │
+           │         ┌────────────────┐           │
+           │         │ Dependency     │           │
+           │         │ Graph → Paths  │           │
+           │         └───────┬────────┘           │
+           ▼                 ▼                    ▼
     ┌──────────────┐ ┌──────────┐ ┌────────────────────┐
-    │ Integration  │ │  E2E     │ │ Spec Mutation       │
-    │ Tests        │ │  Tests   │ │ (quality gate)      │
+    │ Integration  │ │  E2E     │ │ Property Tests     │
+    │ Tests        │ │  Tests   │ │ (randomized input) │
     └──────┬───────┘ └────┬─────┘ └──────────┬─────────┘
            │              │                   │
-           └──────┬───────┘                   │
-                  ▼                           ▼
-       ┌────────────────────┐     ┌────────────────────┐
-       │  Execute Against   │     │ TestsToSpec        │
-       │  Implementation    │     │ Coverage.md        │
-       └─────────┬──────────┘     └────────────────────┘
+           └──────┬───────┴───────────────────┘
+                  │
+                  ▼
+       ┌──────────────────────┐     ┌────────────────────┐
+       │  Spec Mutation       │     │ TestsToSpec        │
+       │  (quality gate)      │────▶│ Coverage.md        │
+       └──────────┬───────────┘     └────────────────────┘
+                  │
+                  ▼
+       ┌────────────────────┐
+       │  Execute Against   │
+       │  Implementation    │
+       └─────────┬──────────┘
                  │
          ┌───────┴───────┐
          │               │
@@ -81,20 +98,52 @@ The agent reads the technical design document to extract:
 - Seed data for test fixtures
 - Error response formats and exact error messages
 
-### Phase 3: Test Generation
+### Phase 3: E2E Workflow Discovery
 
-Two categories of tests are generated:
+Rather than manually composing end-to-end tests, the agent automatically discovers workflow paths by building a **requirement dependency graph**:
+
+1. **Extract state tokens** — For each requirement, identify postconditions (states it produces) and preconditions (states it requires). State tokens are normalized to `STATE:{entity}_{condition}` form.
+
+2. **Build a directed graph** — An edge from REQ-A → REQ-B exists when REQ-A's postcondition satisfies REQ-B's precondition. Additional edges come from explicit sequencing references, shared-resource create→use patterns, and auth dependencies.
+
+3. **Extract maximal paths** — DFS from source nodes (no incoming edges) to sink nodes (no outgoing edges). Paths are filtered to 3–8 requirements and ranked by coverage value with bonuses for cross-domain span and P1-severity requirements.
+
+4. **Merge overlapping prefixes** — Paths sharing a common prefix of ≥2 requirements share a test fixture and branch into separate assertions.
+
+5. **Handle cycles** — Detected via back-edge detection and converted into dedicated state-machine tests.
+
+### Phase 4: Test Generation
+
+Three categories of tests are generated:
 
 | Type | Purpose | Naming Convention |
 |------|---------|-------------------|
 | Integration Tests | Per-endpoint coverage (happy path, validation errors, auth failures, boundaries) | `{Resource}ControllerIntegrationTest` |
-| End-to-End Tests | Cross-domain workflows exercising complete user journeys | `EndToEnd{Workflow}FlowTest` |
+| End-to-End Tests | Cross-domain workflows from discovered dependency paths | `EndToEnd{Workflow}FlowTest` |
+| Property Tests | Invariant verification via randomized inputs (ubiquitous requirements only) | `{Resource}PropertyTest` |
 
 Every test method is instrumented with:
 1. The requirement ID(s) it covers
 2. A description of what behavior it exercises
 
-### Phase 4: Spec Mutation (Quality Gate)
+#### Property-Based Tests
+
+For requirements using the **Ubiquitous EARS pattern** ("The system shall [X]") that declare invariants over a quantifiable property, property-based tests are generated in addition to example-based tests. These exercise the invariant across randomized, bounded inputs to prove universality.
+
+Six property categories are supported:
+
+| Category | Requirement Pattern | Example |
+|----------|-------------------|---------|
+| Format Invariants | "shall [format/constrain] [field] to [constraint]" | Timestamps ≤ 26 chars |
+| Boundary Invariants | "shall [reject/accept] [outside/within] [boundary]" | Amount > 0 |
+| Idempotency | "shall [produce same result] on repeated calls" | GET returns identical results |
+| Data Integrity | "shall [preserve/maintain] [data relationship]" | Balance constant across transfers |
+| Ordering | "shall [order/sort] [resource] by [criteria]" | Transactions in reverse chronological order |
+| Security | "shall [never/always] [security constraint]" | Never expose password hashes |
+
+Generators are derived from the tech.md schema, and failing inputs are shrunk to minimal reproducing cases. Default trial count is 100 per property (configurable up to 1000+ for known flaky areas).
+
+### Phase 5: Spec Mutation (Quality Gate)
 
 Spec mutation validates whether generated tests are genuinely tied to the requirements they claim to cover. For E2E tests claiming 3+ REQ-IDs and any test with status-code-only assertions:
 
@@ -103,16 +152,18 @@ Spec mutation validates whether generated tests are genuinely tied to the requir
 3. Diff original vs. regenerated — score as KILLED (real coverage) or SURVIVED (vacuous)
 4. Tests scoring SURVIVED get remediation hints and are re-generated with missing assertions
 
-### Phase 5: Coverage Report
+### Phase 6: Coverage Report
 
 A `TestsToSpecCoverage.md` report maps every requirement to its covering tests, showing:
 - Integration test coverage percentage
 - End-to-end test coverage percentage
+- Property test coverage (invariant type, trial count, pass/fail, shrunk counterexamples)
 - Combined coverage matrix
 - Spec mutation analysis (KILLED vs SURVIVED per requirement)
+- Workflow discovery summary (dependency graph stats, discovered paths, cross-domain workflows)
 - Uncovered requirements with explanations
 
-### Phase 6: Execution and Violation Reporting
+### Phase 7: Execution and Violation Reporting
 
 Tests run against the implementation. Failures are classified by severity:
 
@@ -125,7 +176,7 @@ Tests run against the implementation. Failures are classified by severity:
 
 Violation categories include: Data Integrity, Behavioral, Security, Boundary, State Management, Vacuous Coverage, and Infrastructure/Configuration.
 
-### Phase 7: Auto-Repair Loop
+### Phase 8: Auto-Repair Loop
 
 If violations are found, the structured violation report is fed back to the coding agent. The coding agent fixes the violating code, tests re-run, and the cycle repeats up to 3 times.
 
@@ -150,7 +201,9 @@ If violations are found, the structured violation report is fed back to the codi
         ├── traceability-standards.md   # Annotation format, coverage report structure
         ├── violation-classification.md # Severity taxonomy and auto-repair hints
         ├── spec-mutation.md            # Mutation testing for coverage verification
-        └── brownfield-discovery.md     # Tree-sitter extraction workflow
+        ├── brownfield-discovery.md     # Tree-sitter extraction workflow
+        ├── property-test-generation.md # PBT for ubiquitous EARS invariants
+        └── e2e-workflow-discovery.md   # Automated E2E path discovery algorithm
 
 tools/
 └── api-surface-extractor/              # Bundled tree-sitter extraction tool
@@ -287,17 +340,21 @@ The codebase has no tech.md — use brownfield mode to extract the API surface f
 
 6. **Meaningful assertions** — Tests verify semantic correctness (field values, relationships, side effects), not just HTTP status codes. Spec mutation validates this.
 
+7. **Algorithmic workflow composition** — E2E tests are discovered via graph algorithms over requirement dependencies, not hand-composed. This ensures complete coverage of cross-domain paths that a human might miss.
+
+8. **Universality for invariants** — Ubiquitous requirements are tested with property-based testing (randomized bounded inputs), not just fixed examples. A passing property test provides stronger evidence than any finite set of examples.
+
 ## Supported Test Frameworks
 
 The agent auto-detects the framework from project files, or accepts explicit specification:
 
-| Framework | Detection Signal |
-|-----------|-----------------|
-| JUnit 5 | `pom.xml` present |
-| pytest | `requirements.txt` or `pyproject.toml` present |
-| Jest | `package.json` present |
-| Go test | `go.mod` present |
-| xUnit | `.csproj` present |
+| Framework | Detection Signal | Property Testing Library |
+|-----------|-----------------|--------------------------|
+| JUnit 5 | `pom.xml` present | jqwik |
+| pytest | `requirements.txt` or `pyproject.toml` present | Hypothesis |
+| Jest | `package.json` present | fast-check |
+| Go test | `go.mod` present | rapid |
+| xUnit | `.csproj` present | FsCheck |
 
 ## Output Files
 
